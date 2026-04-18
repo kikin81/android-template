@@ -72,5 +72,25 @@ class RenameCliTest(unittest.TestCase):
             self.assertIn("com.example.myapp", result.stderr)
 
 
+class RenameDirectoriesTest(unittest.TestCase):
+    def test_moves_java_dirs_to_new_package(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "proj"
+            _scaffold(project)
+            result = _run_rename(
+                project,
+                "--package", "com.acme.widget",
+                "--app-name", "Acme Widget",
+                "--app-name-pascal", "AcmeWidget",
+                "--app-name-lower", "acmewidget",
+            )
+            self.assertEqual(result.returncode, 0, msg=result.stderr)
+            for sub in ("main", "test", "androidTest"):
+                old = project / "app" / "src" / sub / "java" / "com" / "example" / "myapp"
+                new = project / "app" / "src" / sub / "java" / "com" / "acme" / "widget"
+                self.assertFalse(old.exists(), f"{old} should have been removed")
+                self.assertTrue(new.is_dir(), f"{new} should exist")
+
+
 if __name__ == "__main__":
     unittest.main()

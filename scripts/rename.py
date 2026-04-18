@@ -65,12 +65,32 @@ def _preflight(repo: Path) -> None:
         )
 
 
+def _move_dirs(repo: Path, package: str) -> None:
+    new_parts = package.split(".")
+    for sub in ("main", "test", "androidTest"):
+        old_root = repo / "app" / "src" / sub / "java" / "com" / "example" / "myapp"
+        if not old_root.exists():
+            continue
+        new_root = repo / "app" / "src" / sub / "java" / Path(*new_parts)
+        new_root.parent.mkdir(parents=True, exist_ok=True)
+        old_root.rename(new_root)
+    # Clean up now-empty `com/example/` stub parents.
+    for sub in ("main", "test", "androidTest"):
+        stub = repo / "app" / "src" / sub / "java" / "com" / "example"
+        if stub.exists() and not any(stub.iterdir()):
+            stub.rmdir()
+            parent = stub.parent
+            if parent.name == "com" and parent.exists() and not any(parent.iterdir()):
+                parent.rmdir()
+
+
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
     repo = Path.cwd()
     _preflight(repo)
-    raise SystemExit("rename.py: cli + preflight only so far — further tasks pending")
+    _move_dirs(repo, args.package)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
