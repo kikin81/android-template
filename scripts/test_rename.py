@@ -209,5 +209,27 @@ class RenameDryRunTest(unittest.TestCase):
             self.assertEqual(before, after, "dry run must not modify the filesystem")
 
 
+class RenameCollisionTest(unittest.TestCase):
+    def test_lower_app_name_substring_of_new_package(self) -> None:
+        """New package contains the literal 'myapp' substring — verify no corruption."""
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "proj"
+            _scaffold(project)
+            result = _run_rename(
+                project,
+                "--package", "com.foo.myapp",
+                "--app-name", "Foo My App Project",
+                "--app-name-pascal", "FooMyApp",
+                "--app-name-lower", "myapp",
+            )
+            self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+            build_gradle = (project / "app" / "build.gradle.kts").read_text()
+            self.assertIn('namespace = "com.foo.myapp"', build_gradle)
+            self.assertTrue(
+                (project / "app" / "src" / "main" / "java" / "com" / "foo" / "myapp").is_dir(),
+            )
+
+
 if __name__ == "__main__":
     unittest.main()
