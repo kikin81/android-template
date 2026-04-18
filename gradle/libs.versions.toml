@@ -13,7 +13,7 @@ junit = "4.13.2"
 kotlin = "2.3.20"
 nav3Core = "1.0.1"
 lifecycleViewmodelNav3 = "2.10.0"
-spotless = "7.0.2"
+spotless = "8.4.0"
 ktlint = "1.4.1"
 composeKtlintRules = "0.4.22"
 
