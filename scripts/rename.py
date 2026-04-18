@@ -79,10 +79,14 @@ Next steps (complete these manually):
      require PR before merge, linear history, squash-merge only.
   3. Enable auto-delete of head branches after merge.
   4. Enable Renovate on the repository (renovate.json is committed).
-  5. Add any release secrets required by open-turo/actions-jvm/release
+  5. Add a RELEASE_PAT repo secret (fine-grained PAT, contents: write) that
+     the release workflow uses to push the Gradle version bump and tag to
+     protected main. GITHUB_TOKEN cannot push to protected branches. See
+     https://github.com/open-turo/actions-jvm/blob/main/release/README.md#usage
+  6. Add any other release secrets required by open-turo/actions-jvm/release
      (see .github/workflows/release.yaml).
-  6. Replace the placeholder icon in app/src/main/res/mipmap-*/ with your own.
-  7. Update the README title/description for your project.
+  7. Replace the placeholder icon in app/src/main/res/mipmap-*/ with your own.
+  8. Update the README title/description for your project.
 """
 
 
@@ -136,23 +140,43 @@ def _rewrite_files(repo: Path, args: argparse.Namespace, dry_run: bool = False) 
             path.write_text(updated, encoding="utf-8")
 
 
+# Source sets that may contain `java/com/example/myapp`. `screenshotTest` is
+# part of this list because Compose Preview Screenshot Testing emits Kotlin
+# tests under the standard package layout.
+SOURCE_SETS = ("main", "test", "androidTest", "screenshotTest")
+
+
 def _move_dirs(repo: Path, package: str, dry_run: bool = False) -> None:
     new_parts = package.split(".")
-    for sub in ("main", "test", "androidTest"):
+    pkg_path = Path(*new_parts)
+
+    # (old_root, new_root) pairs to move. Java/Kotlin source roots first, then
+    # the Compose Preview Screenshot Testing baseline directory which mirrors
+    # the package structure under `reference/` instead of `java/`.
+    moves: list[tuple[Path, Path]] = []
+    for sub in SOURCE_SETS:
         old_root = repo / "app" / "src" / sub / "java" / "com" / "example" / "myapp"
-        if not old_root.exists():
-            continue
-        new_root = repo / "app" / "src" / sub / "java" / Path(*new_parts)
+        if old_root.exists():
+            moves.append((old_root, repo / "app" / "src" / sub / "java" / pkg_path))
+    baseline_old = repo / "app" / "src" / "screenshotTestDebug" / "reference" / "com" / "example" / "myapp"
+    if baseline_old.exists():
+        moves.append((baseline_old, repo / "app" / "src" / "screenshotTestDebug" / "reference" / pkg_path))
+
+    for old_root, new_root in moves:
         if dry_run:
             print(f"[dry-run] would move {old_root} -> {new_root}")
             continue
         new_root.parent.mkdir(parents=True, exist_ok=True)
         old_root.rename(new_root)
+
     if dry_run:
         return
-    # Clean up now-empty `com/example/` stub parents.
-    for sub in ("main", "test", "androidTest"):
-        stub = repo / "app" / "src" / sub / "java" / "com" / "example"
+
+    # Clean up now-empty `com/example/` stub parents in every root we touched.
+    stub_parents = [repo / "app" / "src" / sub / "java" for sub in SOURCE_SETS]
+    stub_parents.append(repo / "app" / "src" / "screenshotTestDebug" / "reference")
+    for root in stub_parents:
+        stub = root / "com" / "example"
         if stub.exists() and not any(stub.iterdir()):
             stub.rmdir()
             parent = stub.parent

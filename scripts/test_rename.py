@@ -92,6 +92,63 @@ class RenameDirectoriesTest(unittest.TestCase):
                 self.assertTrue(new.is_dir(), f"{new} should exist")
 
 
+class RenameScreenshotTest(unittest.TestCase):
+    """`_move_dirs` must also relocate `screenshotTest` Kotlin sources and the
+    `screenshotTestDebug/reference` baseline tree. `android create
+    empty-activity` does not emit these, so seed them manually before renaming.
+    """
+
+    def test_moves_screenshot_test_sources_and_baselines(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "proj"
+            _scaffold(project)
+
+            screenshot_src = (
+                project / "app" / "src" / "screenshotTest" / "java"
+                / "com" / "example" / "myapp" / "ui" / "main"
+            )
+            screenshot_src.mkdir(parents=True)
+            (screenshot_src / "MainScreenScreenshotTest.kt").write_text(
+                "package com.example.myapp.ui.main\n", encoding="utf-8",
+            )
+
+            baseline_dir = (
+                project / "app" / "src" / "screenshotTestDebug" / "reference"
+                / "com" / "example" / "myapp" / "ui" / "main" / "MainScreenScreenshotTestKt"
+            )
+            baseline_dir.mkdir(parents=True)
+            (baseline_dir / "MainScreenDefaultPreview_light_38cd53e8_0.png").write_bytes(b"\x89PNG\r\n")
+
+            result = _run_rename(
+                project,
+                "--package", "com.acme.widget",
+                "--app-name", "Acme Widget",
+                "--app-name-pascal", "AcmeWidget",
+                "--app-name-lower", "acmewidget",
+            )
+            self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+            new_src = (
+                project / "app" / "src" / "screenshotTest" / "java"
+                / "com" / "acme" / "widget" / "ui" / "main" / "MainScreenScreenshotTest.kt"
+            )
+            self.assertTrue(new_src.is_file(), f"{new_src} should exist")
+            self.assertIn("package com.acme.widget.ui.main", new_src.read_text())
+
+            new_baseline = (
+                project / "app" / "src" / "screenshotTestDebug" / "reference"
+                / "com" / "acme" / "widget" / "ui" / "main" / "MainScreenScreenshotTestKt"
+                / "MainScreenDefaultPreview_light_38cd53e8_0.png"
+            )
+            self.assertTrue(new_baseline.is_file(), f"{new_baseline} should exist")
+
+            for stale in (
+                project / "app" / "src" / "screenshotTest" / "java" / "com" / "example",
+                project / "app" / "src" / "screenshotTestDebug" / "reference" / "com" / "example",
+            ):
+                self.assertFalse(stale.exists(), f"{stale} should have been cleaned up")
+
+
 class RenameContentTest(unittest.TestCase):
     def test_rewrites_placeholders_across_files(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
