@@ -38,6 +38,12 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    lint {
+        baseline = file("lint-baseline.xml")
+        warningsAsErrors = false
+        abortOnError = true
+    }
 }
 
 kotlin {
@@ -115,5 +121,9 @@ tasks.register<JacocoReport>("jacocoTestReport") {
 
     classDirectories.setFrom(debugTree)
     sourceDirectories.setFrom(files("src/main/java", "src/main/kotlin"))
-    executionData.setFrom(fileTree(layout.buildDirectory.get()).include("**/*.exec"))
+    executionData.setFrom(
+        fileTree(layout.buildDirectory.get()) {
+            include("jacoco/*.exec", "outputs/unit_test_code_coverage/**/*.exec")
+        },
+    )
 }
