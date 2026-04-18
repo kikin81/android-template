@@ -33,6 +33,7 @@ Private GitHub template for bootstrapping Android apps with modern defaults (AGP
    - Update `.github/CODEOWNERS` reviewers.
    - Replace the launcher icon in `app/src/main/res/mipmap-*`.
    - Configure release secrets (see `.github/workflows/release.yaml`).
+   - Switch `.github/workflows/ci.yaml` to reference the shared CI workflow from this template (see the checklist item printed by the rename script) so Renovate can propagate future template fixes.
 
 ## Requirements
 
@@ -55,7 +56,7 @@ pre-commit run --all-files       # run all hooks
 - AGP 9, Compose, Kotlin DSL, version catalog (`gradle/libs.versions.toml`).
 - Spotless + ktlint 1.4.1 + Compose rules.
 - Jacoco coverage with PR comment.
-- CI workflow (`lint`, `test`, `build`, `rename-script`).
+- CI workflow (`lint`, `test`, `build`, `rename-script`). Generic Android jobs live in a reusable [`shared-ci.yaml`](.github/workflows/shared-ci.yaml) that derived projects reference by version so template CI fixes propagate via Renovate.
 - Release workflow via semantic-release (`@open-turo/semantic-release-config/lib/gradle`).
 - Renovate config with Kotlin/Compose groupings.
 - Pre-commit hooks: commitlint, actionlint, gitleaks, spotless.

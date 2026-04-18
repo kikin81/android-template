@@ -83,6 +83,13 @@ Next steps (complete these manually):
      (see .github/workflows/release.yaml).
   6. Replace the placeholder icon in app/src/main/res/mipmap-*/ with your own.
   7. Update the README title/description for your project.
+  8. Switch .github/workflows/ci.yaml to the shared-ci workflow in the
+     template repo so Renovate can track template updates:
+         uses: ./.github/workflows/shared-ci.yaml
+       becomes
+         uses: kikin81/android-template/.github/workflows/shared-ci.yaml@v1
+     Then delete .github/workflows/shared-ci.yaml from this repo — it's only
+     needed in the template.
 """
 
 

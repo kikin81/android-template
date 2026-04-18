@@ -1,0 +1,118 @@
+name: Shared Android CI
+
+# Reusable workflow with the generic Android lint/test/build pipeline that
+# every project generated from this template needs. Derived repos should
+# call this via:
+#
+#   jobs:
+#     ci:
+#       uses: kikin81/android-template/.github/workflows/shared-ci.yaml@v1
+#
+# Pin to a tagged release (`@v1.0.0`) for stability; Renovate will propose
+# bumps as new tags ship.
+
+on:
+  workflow_call:
+    inputs:
+      java-version-file:
+        description: Path to the file containing the JDK version (default .java-version).
+        required: false
+        type: string
+        default: ".java-version"
+      coverage-min-overall:
+        description: Minimum overall coverage percentage for the PR coverage comment.
+        required: false
+        type: number
+        default: 0
+      coverage-min-changed:
+        description: Minimum changed-files coverage percentage for the PR coverage comment.
+        required: false
+        type: number
+        default: 0
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Action lint
+        uses: open-turo/actions-jvm/lint@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          checkout-repo: true
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version-file: ${{ inputs.java-version-file }}
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Validate Gradle wrapper
+        uses: gradle/actions/wrapper-validation@v6
+
+      - name: Spotless + Android Lint
+        run: ./gradlew spotlessCheck lint
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version-file: ${{ inputs.java-version-file }}
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Unit tests with coverage
+        run: ./gradlew :app:jacocoTestReport
+
+      - name: Coverage report
+        if: github.event_name == 'pull_request'
+        uses: madrapps/jacoco-report@v1.7.2
+        with:
+          paths: app/build/reports/jacoco/jacocoTestReport/jacocoTestReport.xml
+          token: ${{ secrets.GITHUB_TOKEN }}
+          min-coverage-overall: ${{ inputs.coverage-min-overall }}
+          min-coverage-changed-files: ${{ inputs.coverage-min-changed }}
+          update-comment: true
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version-file: ${{ inputs.java-version-file }}
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug
