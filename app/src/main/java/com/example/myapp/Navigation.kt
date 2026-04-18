@@ -11,17 +11,18 @@ import androidx.navigation3.ui.NavDisplay
 import com.example.myapp.ui.main.MainScreen
 
 @Composable
-fun MainNavigation() {
-  val backStack = rememberNavBackStack(Main)
+fun MainNavigation(modifier: Modifier = Modifier) {
+    val backStack = rememberNavBackStack(Main)
 
-  NavDisplay(
-    backStack = backStack,
-    onBack = { backStack.removeLastOrNull() },
-    entryProvider =
-      entryProvider {
-        entry<Main> {
-          MainScreen(onItemClick = { navKey -> backStack.add(navKey) }, modifier = Modifier.safeDrawingPadding().padding(16.dp))
-        }
-      },
-  )
+    NavDisplay(
+        modifier = modifier,
+        backStack = backStack,
+        onBack = { backStack.removeLastOrNull() },
+        entryProvider =
+            entryProvider {
+                entry<Main> {
+                    MainScreen(onItemClick = { navKey -> backStack.add(navKey) }, modifier = Modifier.safeDrawingPadding().padding(16.dp))
+                }
+            },
+    )
 }

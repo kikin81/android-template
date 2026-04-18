@@ -13,6 +13,9 @@ junit = "4.13.2"
 kotlin = "2.3.20"
 nav3Core = "1.0.1"
 lifecycleViewmodelNav3 = "2.10.0"
+spotless = "7.0.2"
+ktlint = "1.4.1"
+composeKtlintRules = "0.4.22"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "androidxCore" }
@@ -41,3 +44,4 @@ androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecy
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }

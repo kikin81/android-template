@@ -14,42 +14,48 @@ import com.example.myapp.theme.MyApplicationTheme
 
 @Composable
 fun MainScreen(
-  onItemClick: (NavKey) -> Unit,
-  modifier: Modifier = Modifier,
-  viewModel: MainScreenViewModel = viewModel { MainScreenViewModel(DefaultDataRepository()) },
+    onItemClick: (NavKey) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: MainScreenViewModel = viewModel { MainScreenViewModel(DefaultDataRepository()) },
 ) {
-  val state by viewModel.uiState.collectAsStateWithLifecycle()
-  when (state) {
-    MainScreenUiState.Loading -> {
-      // Blank
+    val state by viewModel.uiState.collectAsStateWithLifecycle()
+    when (state) {
+        MainScreenUiState.Loading -> {
+            // Blank
+        }
+        is MainScreenUiState.Success -> {
+            MainScreen(data = (state as MainScreenUiState.Success).data, modifier = modifier)
+        }
+        is MainScreenUiState.Error -> {
+            Text("Error loading data: ${(state as MainScreenUiState.Error).throwable.message}")
+        }
     }
-    is MainScreenUiState.Success -> {
-      MainScreen(data = (state as MainScreenUiState.Success).data, modifier = modifier)
-    }
-    is MainScreenUiState.Error -> {
-      Text("Error loading data: ${(state as MainScreenUiState.Error).throwable.message}")
-    }
-  }
 }
 
 @Composable
-internal fun MainScreen(data: List<String>, modifier: Modifier = Modifier) {
-  Column(modifier) { data.forEach { Greeting(it) } }
+internal fun MainScreen(
+    data: List<String>,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier) { data.forEach { Greeting(it) } }
 }
 
 @Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-  Text(text = "Hello $name!", modifier = modifier)
+fun Greeting(
+    name: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(text = "Hello $name!", modifier = modifier)
 }
 
 @Preview(showBackground = true)
 @Composable
-fun MainScreenPreview() {
-  MyApplicationTheme { MainScreen(listOf("Android")) }
+private fun MainScreenPreview() {
+    MyApplicationTheme { MainScreen(listOf("Android")) }
 }
 
 @Preview(showBackground = true, widthDp = 340)
 @Composable
-fun MainScreenPortraitPreview() {
-  MyApplicationTheme { MainScreen(listOf("Android")) }
+private fun MainScreenPortraitPreview() {
+    MyApplicationTheme { MainScreen(listOf("Android")) }
 }
