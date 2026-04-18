@@ -181,5 +181,33 @@ class RenameFinalizationTest(unittest.TestCase):
             self.assertTrue((project / "rename.py").exists(), "rename.py should remain with --keep-script")
 
 
+class RenameDryRunTest(unittest.TestCase):
+    def test_dry_run_makes_no_changes(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "proj"
+            _scaffold(project)
+            before = {
+                str(p.relative_to(project)): p.read_bytes()
+                for p in project.rglob("*")
+                if p.is_file()
+            }
+            result = _run_rename(
+                project,
+                "--package", "com.acme.widget",
+                "--app-name", "Acme Widget",
+                "--app-name-pascal", "AcmeWidget",
+                "--app-name-lower", "acmewidget",
+                "--dry-run",
+            )
+            self.assertEqual(result.returncode, 0, msg=result.stderr)
+            self.assertIn("DRY RUN", result.stdout)
+            after = {
+                str(p.relative_to(project)): p.read_bytes()
+                for p in project.rglob("*")
+                if p.is_file()
+            }
+            self.assertEqual(before, after, "dry run must not modify the filesystem")
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -99,7 +99,7 @@ def _finalize(repo: Path, keep_script: bool) -> None:
         root_copy.unlink()
 
 
-def _rewrite_files(repo: Path, args: argparse.Namespace) -> None:
+def _rewrite_files(repo: Path, args: argparse.Namespace, dry_run: bool = False) -> None:
     dotted_new = args.package
     slashed_new = "/".join(args.package.split("."))
     # Order matters: longest/most-specific patterns first. `MyApplication` must
@@ -128,19 +128,28 @@ def _rewrite_files(repo: Path, args: argparse.Namespace) -> None:
             updated = original
             for old, new in substitutions:
                 updated = updated.replace(old, new)
-            if updated != original:
-                path.write_text(updated, encoding="utf-8")
+            if updated == original:
+                continue
+            if dry_run:
+                print(f"[dry-run] would rewrite {path.relative_to(repo)}")
+                continue
+            path.write_text(updated, encoding="utf-8")
 
 
-def _move_dirs(repo: Path, package: str) -> None:
+def _move_dirs(repo: Path, package: str, dry_run: bool = False) -> None:
     new_parts = package.split(".")
     for sub in ("main", "test", "androidTest"):
         old_root = repo / "app" / "src" / sub / "java" / "com" / "example" / "myapp"
         if not old_root.exists():
             continue
         new_root = repo / "app" / "src" / sub / "java" / Path(*new_parts)
+        if dry_run:
+            print(f"[dry-run] would move {old_root} -> {new_root}")
+            continue
         new_root.parent.mkdir(parents=True, exist_ok=True)
         old_root.rename(new_root)
+    if dry_run:
+        return
     # Clean up now-empty `com/example/` stub parents.
     for sub in ("main", "test", "androidTest"):
         stub = repo / "app" / "src" / sub / "java" / "com" / "example"
@@ -155,8 +164,13 @@ def main(argv: list[str] | None = None) -> int:
     args = _parse_args(sys.argv[1:] if argv is None else argv)
     repo = Path.cwd()
     _preflight(repo)
-    _move_dirs(repo, args.package)
-    _rewrite_files(repo, args)
+    if args.dry_run:
+        print("DRY RUN — no changes will be written.")
+    _move_dirs(repo, args.package, dry_run=args.dry_run)
+    _rewrite_files(repo, args, dry_run=args.dry_run)
+    if args.dry_run:
+        print("DRY RUN complete.")
+        return 0
     _finalize(repo, keep_script=args.keep_script)
     return 0
 
