@@ -13,6 +13,7 @@ junit = "4.13.2"
 kotlin = "2.3.20"
 nav3Core = "1.1.0"
 lifecycleViewmodelNav3 = "2.10.0"
+screenshot = "0.0.1-alpha14"
 spotless = "8.4.0"
 ktlint = "1.4.1"
 composeKtlintRules = "0.4.22"
@@ -39,9 +40,11 @@ kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-t
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "nav3Core" }
 androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "nav3Core" }
 androidx-lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "lifecycleViewmodelNav3" }
+screenshot-validation-api = { module = "com.android.tools.screenshot:screenshot-validation-api", version.ref = "screenshot" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "androidGradlePlugin" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+compose-screenshot = { id = "com.android.compose.screenshot", version.ref = "screenshot" }
 spotless = { id = "com.diffplug.spotless", version.ref = "spotless" }
