@@ -231,5 +231,29 @@ class RenameCollisionTest(unittest.TestCase):
             )
 
 
+@unittest.skipUnless(os.environ.get("RUN_FULL_BUILD") == "1", "set RUN_FULL_BUILD=1 to run")
+class RenameFullBuildTest(unittest.TestCase):
+    def test_assemble_debug_after_rename(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "proj"
+            _scaffold(project)
+            rename_result = _run_rename(
+                project,
+                "--package", "com.acme.widget",
+                "--app-name", "Acme Widget",
+                "--app-name-pascal", "AcmeWidget",
+                "--app-name-lower", "acmewidget",
+            )
+            self.assertEqual(rename_result.returncode, 0, msg=rename_result.stderr)
+
+            gradle_result = subprocess.run(
+                ["./gradlew", ":app:assembleDebug", "--no-daemon"],
+                cwd=project,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(gradle_result.returncode, 0, msg=gradle_result.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
