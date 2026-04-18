@@ -97,6 +97,36 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug
 
+  screenshot:
+    name: Screenshot tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up JDK
+        uses: actions/setup-java@v5
+        with:
+          distribution: zulu
+          java-version-file: .java-version
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v4
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Validate screenshot tests
+        run: ./gradlew :app:validateDebugScreenshotTest
+
+      - name: Upload diff report on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: screenshot-diff-report
+          path: app/build/reports/screenshotTest/preview/debug/
+          if-no-files-found: ignore
+
   rename-script:
     name: Rename script
     runs-on: ubuntu-latest
