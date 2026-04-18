@@ -198,36 +198,46 @@ git commit -m "build: enable gradle caching, parallel, and configuration cache"
 
 ---
 
-## Task 4: Add Foojay toolchain resolver
+## Task 4: Verify Foojay toolchain resolver
 
 **Files:**
-- Modify: `settings.gradle.kts`
+- Possibly modify: `settings.gradle.kts`
 
-- [ ] **Step 1: Apply the Foojay plugin**
+The current `android create` generator (AGP 9) already emits `id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"` in the `plugins { }` block of `settings.gradle.kts`. This task verifies it's present and at an acceptable version — usually no change is needed.
 
-At the top of `settings.gradle.kts`, add the following plugin declaration inside (or adjacent to) the existing `pluginManagement {}` block — use the latest version at implementation time (check https://plugins.gradle.org/plugin/org.gradle.toolchains.foojay-resolver-convention):
+- [ ] **Step 1: Check `settings.gradle.kts` for the plugin**
+
+```bash
+grep -n "foojay-resolver-convention" settings.gradle.kts
+```
+
+Expected: one match showing a `version "X.Y.Z"` pin with X.Y.Z >= 0.9.0.
+
+If the plugin is NOT present, add it to the `plugins { }` block:
 
 ```kotlin
 plugins {
-    id("org.gradle.toolchains.foojay-resolver-convention") version "0.9.0"
+    id("org.gradle.toolchains.foojay-resolver-convention") version "1.0.0"
 }
 ```
 
-If `settings.gradle.kts` already has a `plugins { … }` block (it does in recent `android create` outputs), add this line inside it.
-
-- [ ] **Step 2: Verify**
+- [ ] **Step 2: Verify build**
 
 ```bash
 ./gradlew :app:assembleDebug
 ```
 
-Expected: `BUILD SUCCESSFUL`. If the build fetches a JDK automatically, Foojay is working.
+Expected: `BUILD SUCCESSFUL`.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 3: Commit only if a change was made**
+
+If the generator already had Foojay (typical case), this task is a no-op verification — skip the commit and note "Task 4: verified Foojay 1.0.0 already present — no change needed" in your report.
+
+If you modified `settings.gradle.kts`:
 
 ```bash
 git add settings.gradle.kts
-git commit -m "build: pin Foojay toolchain resolver for automatic JDK download"
+git commit -m "build: ensure Foojay toolchain resolver is applied"
 ```
 
 ---
@@ -963,9 +973,15 @@ import sys
 from pathlib import Path
 
 # Placeholders baked into the `android create empty-activity` output.
+# Note: `MyApplication` is the actual class/theme prefix the generator emits (e.g.
+# `MyApplicationTheme`, `Theme.MyApplication`); bare `MyApp` does not appear in
+# current output but is kept as a defensive fallback. `MyApplication` must be
+# substituted BEFORE `MyApp` (longest-match-first) or `MyApplicationTheme` would
+# become `{pascal}licationTheme`.
 OLD_PACKAGE_DOTTED = "com.example.myapp"
 OLD_PACKAGE_SLASHED = "com/example/myapp"
 OLD_APP_NAME = "My App"
+OLD_APPLICATION = "MyApplication"
 OLD_PASCAL = "MyApp"
 OLD_LOWER = "myapp"
 
@@ -1168,7 +1184,14 @@ class RenameContentTest(unittest.TestCase):
                         text = path.read_text(encoding="utf-8")
                     except UnicodeDecodeError:
                         continue
-                    for needle in ("com.example.myapp", "com/example/myapp", "My App", "MyApp", "myapp"):
+                    for needle in (
+                        "com.example.myapp",
+                        "com/example/myapp",
+                        "My App",
+                        "MyApplication",
+                        "MyApp",
+                        "myapp",
+                    ):
                         self.assertNotIn(needle, text, f"{needle!r} still in {path}")
 
             # Spot-check key files have the new identifiers.
@@ -1177,10 +1200,16 @@ class RenameContentTest(unittest.TestCase):
             self.assertIn('applicationId = "com.acme.widget"', build_gradle)
 
             settings_gradle = (project / "settings.gradle.kts").read_text()
-            self.assertIn('rootProject.name = "acmewidget"', settings_gradle)
+            self.assertIn('rootProject.name = "Acme Widget"', settings_gradle)
 
             strings_xml = (project / "app" / "src" / "main" / "res" / "values" / "strings.xml").read_text()
             self.assertIn(">Acme Widget<", strings_xml)
+
+            # Theme-name substitution must produce `AcmeWidgetTheme`, not
+            # `AcmeWidgetlicationTheme` (regression guard for MyApplication order).
+            theme_kt = (project / "app" / "src" / "main" / "java" / "com" / "acme" / "widget" / "theme" / "Theme.kt").read_text()
+            self.assertIn("AcmeWidgetTheme", theme_kt)
+            self.assertNotIn("AcmeWidgetlication", theme_kt)
 ```
 
 - [ ] **Step 2: Run — expect the new test to fail**
@@ -1204,10 +1233,14 @@ SELF_NAME = "rename.py"
 def _rewrite_files(repo: Path, args: argparse.Namespace) -> None:
     dotted_new = args.package
     slashed_new = "/".join(args.package.split("."))
+    # Order matters: longest/most-specific patterns first. `MyApplication` must
+    # come before `MyApp` so `MyApplicationTheme` doesn't mangle into
+    # `{pascal}licationTheme`.
     substitutions = [
         (OLD_PACKAGE_DOTTED, dotted_new),
         (OLD_PACKAGE_SLASHED, slashed_new),
         (OLD_APP_NAME, args.app_name),
+        (OLD_APPLICATION, args.app_name_pascal),
         (OLD_PASCAL, args.app_name_pascal),
         (OLD_LOWER, args.app_name_lower),
     ]
@@ -1457,10 +1490,12 @@ Change `_rewrite_files` to optionally print a short diff summary and skip writes
 def _rewrite_files(repo: Path, args: argparse.Namespace, dry_run: bool = False) -> None:
     dotted_new = args.package
     slashed_new = "/".join(args.package.split("."))
+    # Order matters: longest/most-specific patterns first (see Task 15 for details).
     substitutions = [
         (OLD_PACKAGE_DOTTED, dotted_new),
         (OLD_PACKAGE_SLASHED, slashed_new),
         (OLD_APP_NAME, args.app_name),
+        (OLD_APPLICATION, args.app_name_pascal),
         (OLD_PASCAL, args.app_name_pascal),
         (OLD_LOWER, args.app_name_lower),
     ]

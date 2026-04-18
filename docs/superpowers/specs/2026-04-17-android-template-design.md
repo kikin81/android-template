@@ -107,12 +107,13 @@ This prevents double-rename and silent no-ops when the script is run on an alrea
 Order matters — most specific patterns first to avoid collisions:
 
 1. **Move three directory trees**: `app/src/{main,test,androidTest}/java/com/example/myapp/` → `.../java/<package-as-path>/`. Create the new parent with `mkdir(parents=True, exist_ok=True)` before `Path.rename`.
-2. **Walk & rewrite files** matching `*.kt *.kts *.xml *.md *.properties *.toml` under the repo, skipping `.git/`, `build/`, `.gradle/`, `node_modules/`, `.idea/`, and `scripts/rename.py` itself. Apply substitutions in this order per file, all via `str.replace` (case-sensitive literal):
+2. **Walk & rewrite files** matching `*.kt *.kts *.xml *.md *.properties *.toml` under the repo, skipping `.git/`, `build/`, `.gradle/`, `node_modules/`, `.idea/`, and `scripts/rename.py` itself. Apply substitutions in this order per file, all via `str.replace` (case-sensitive literal). Order matters — longest/most-specific first:
    1. `com.example.myapp` → new dotted package.
    2. `com/example/myapp` → new path-form package (for stringified paths, if any).
    3. `My App` → `--app-name` (the space makes it unambiguous).
-   4. `MyApp` → `--app-name-pascal` (must run after step 3 so `My App` is already gone; case-sensitivity prevents it touching `myapp`).
-   5. `myapp` → `--app-name-lower` (must run last so it doesn't touch `MyApp` — and it doesn't, because it's case-sensitive).
+   4. `MyApplication` → `--app-name-pascal` (must run before `MyApp`). The AGP 9 generator emits `MyApplicationTheme` / `Theme.MyApplication`; substituting `MyApp` first would mangle these into `{pascal}licationTheme`.
+   5. `MyApp` → `--app-name-pascal` (defensive — not emitted by the current generator, but protects against future template changes).
+   6. `myapp` → `--app-name-lower` (defensive — current generator's bare `myapp` occurrences are all inside dotted/slashed package refs, already handled above; this catches future bare occurrences).
 3. **Print post-rename checklist** to stdout (see below).
 4. **Self-remove** `scripts/rename.py` and `scripts/test_rename.py` unless `--keep-script` was passed.
 
@@ -133,7 +134,7 @@ Runs against a fresh `android create` output to guarantee the rename survives te
 2. Copy `scripts/rename.py` into the tmp project.
 3. Execute it with fixture inputs (e.g., `--package com.acme.widget --app-name "Acme Widget" --app-name-pascal AcmeWidget --app-name-lower acmewidget`).
 4. Assert:
-   - Zero residual matches for any of: `com.example.myapp`, `com/example/myapp`, `My App`, `MyApp`, `myapp`.
+   - Zero residual matches for any of: `com.example.myapp`, `com/example/myapp`, `My App`, `MyApplication`, `MyApp`, `myapp`.
    - Expected identifiers present in:
      - `app/build.gradle.kts` (`namespace = "com.acme.widget"`, `applicationId = "com.acme.widget"`).
      - `settings.gradle.kts` (`rootProject.name = "acmewidget"`).
