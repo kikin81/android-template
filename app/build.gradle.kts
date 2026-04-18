@@ -90,6 +90,11 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.navigation3)
 }
 
+tasks.register("publish") {
+    description = "No-op publish task to satisfy semantic-release verification in CI"
+    group = "publishing"
+}
+
 jacoco {
     toolVersion = "0.8.12"
 }
