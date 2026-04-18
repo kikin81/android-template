@@ -29,6 +29,7 @@ Private GitHub template for bootstrapping Android apps with modern defaults (AGP
 5. Follow the post-rename checklist the script prints:
 
    - Configure branch protection on `main`: require `lint`, `test`, `build` checks; require PR; squash-merge only; linear history; auto-delete branches.
+   - Create a `RELEASE_PAT` repo secret (fine-grained PAT with `contents: write` on this repo). The release workflow uses this instead of the default `GITHUB_TOKEN` because semantic-release's `@semantic-release/git` plugin pushes the Gradle version bump and tag to `main`, which is a protected branch — and `GITHUB_TOKEN` cannot push to protected branches. See [open-turo/actions-jvm/release docs](https://github.com/open-turo/actions-jvm/blob/main/release/README.md#usage) for background.
    - Enable Renovate on the new repo.
    - Update `.github/CODEOWNERS` reviewers.
    - Replace the launcher icon in `app/src/main/res/mipmap-*`.

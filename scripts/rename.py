@@ -79,10 +79,14 @@ Next steps (complete these manually):
      require PR before merge, linear history, squash-merge only.
   3. Enable auto-delete of head branches after merge.
   4. Enable Renovate on the repository (renovate.json is committed).
-  5. Add any release secrets required by open-turo/actions-jvm/release
+  5. Add a RELEASE_PAT repo secret (fine-grained PAT, contents: write) that
+     the release workflow uses to push the Gradle version bump and tag to
+     protected main. GITHUB_TOKEN cannot push to protected branches. See
+     https://github.com/open-turo/actions-jvm/blob/main/release/README.md#usage
+  6. Add any other release secrets required by open-turo/actions-jvm/release
      (see .github/workflows/release.yaml).
-  6. Replace the placeholder icon in app/src/main/res/mipmap-*/ with your own.
-  7. Update the README title/description for your project.
+  7. Replace the placeholder icon in app/src/main/res/mipmap-*/ with your own.
+  8. Update the README title/description for your project.
 """
 
 

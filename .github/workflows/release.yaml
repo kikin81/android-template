@@ -40,7 +40,10 @@ jobs:
       - name: Release
         uses: open-turo/actions-jvm/release@v2
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          # GITHUB_TOKEN cannot push to protected branches, so @semantic-release/git
+          # (which bumps the Gradle version and pushes the tag to main) needs a PAT.
+          # See open-turo docs: https://github.com/open-turo/actions-jvm/blob/main/release/README.md#usage
+          github-token: ${{ secrets.RELEASE_PAT }}
 
       # TODO: Firebase App Distribution is deferred to a follow-up design.
       # When enabled, add a step here that uploads the release APK using
