@@ -17,11 +17,13 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    # open-turo/actions-jvm/lint runs a semantic-release verify step that does a
-    # `git push --dry-run` to the current branch; GITHUB_TOKEN therefore needs
-    # contents: write even on PRs, despite this job only linting in practice.
+    # open-turo/actions-jvm/lint runs a semantic-release dry-run via
+    # lint-release-notes. It needs contents: write for the `git push --dry-run`
+    # credential check and pull-requests: write to post the release-notes
+    # preview comment on the PR.
     permissions:
       contents: write
+      pull-requests: write
     steps:
       - name: Action lint
         uses: open-turo/actions-jvm/lint@v2
