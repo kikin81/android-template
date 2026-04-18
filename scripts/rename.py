@@ -70,6 +70,34 @@ REWRITE_SUFFIXES = {".kt", ".kts", ".xml", ".md", ".properties", ".toml"}
 SKIP_DIR_NAMES = {".git", ".gradle", ".idea", "build", "node_modules"}
 SELF_NAME = "rename.py"
 
+CHECKLIST = """
+Next steps (complete these manually):
+
+  1. Set the git remote:
+       git remote add origin git@github.com:<you>/<repo>.git
+  2. Configure branch protection on main: required checks (lint, test, build),
+     require PR before merge, linear history, squash-merge only.
+  3. Enable auto-delete of head branches after merge.
+  4. Enable Renovate on the repository (renovate.json is committed).
+  5. Add any release secrets required by open-turo/actions-jvm/release
+     (see .github/workflows/release.yaml).
+  6. Replace the placeholder icon in app/src/main/res/mipmap-*/ with your own.
+  7. Update the README title/description for your project.
+"""
+
+
+def _finalize(repo: Path, keep_script: bool) -> None:
+    print(CHECKLIST)
+    if keep_script:
+        return
+    for name in ("rename.py", "test_rename.py"):
+        target = repo / "scripts" / name
+        if target.exists():
+            target.unlink()
+    root_copy = repo / "rename.py"
+    if root_copy.exists():
+        root_copy.unlink()
+
 
 def _rewrite_files(repo: Path, args: argparse.Namespace) -> None:
     dotted_new = args.package
@@ -129,6 +157,7 @@ def main(argv: list[str] | None = None) -> int:
     _preflight(repo)
     _move_dirs(repo, args.package)
     _rewrite_files(repo, args)
+    _finalize(repo, keep_script=args.keep_script)
     return 0
 
 

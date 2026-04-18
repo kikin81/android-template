@@ -148,5 +148,38 @@ class RenameContentTest(unittest.TestCase):
             self.assertNotIn("AcmeWidgetlication", theme_kt)
 
 
+class RenameFinalizationTest(unittest.TestCase):
+    def test_self_deletes_and_prints_checklist(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "proj"
+            _scaffold(project)
+            result = _run_rename(
+                project,
+                "--package", "com.acme.widget",
+                "--app-name", "Acme Widget",
+                "--app-name-pascal", "AcmeWidget",
+                "--app-name-lower", "acmewidget",
+            )
+            self.assertEqual(result.returncode, 0, msg=result.stderr)
+            self.assertFalse((project / "rename.py").exists(), "rename.py should self-delete")
+            self.assertIn("Next steps", result.stdout)
+            self.assertIn("git remote add origin", result.stdout)
+
+    def test_keep_script_flag(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "proj"
+            _scaffold(project)
+            result = _run_rename(
+                project,
+                "--package", "com.acme.widget",
+                "--app-name", "Acme Widget",
+                "--app-name-pascal", "AcmeWidget",
+                "--app-name-lower", "acmewidget",
+                "--keep-script",
+            )
+            self.assertEqual(result.returncode, 0, msg=result.stderr)
+            self.assertTrue((project / "rename.py").exists(), "rename.py should remain with --keep-script")
+
+
 if __name__ == "__main__":
     unittest.main()
