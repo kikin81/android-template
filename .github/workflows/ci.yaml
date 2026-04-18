@@ -117,15 +117,59 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
 
       - name: Validate screenshot tests
+        id: validate
         run: ./gradlew :app:validateDebugScreenshotTest
 
       - name: Upload diff report on failure
-        if: failure()
+        if: failure() && steps.validate.outcome == 'failure'
         uses: actions/upload-artifact@v4
         with:
           name: screenshot-diff-report
           path: app/build/reports/screenshotTest/preview/debug/
           if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Comment with diff report link on failure
+        if: failure() && steps.validate.outcome == 'failure' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            const marker = '<!-- screenshot-diff-comment -->';
+            const body = [
+              marker,
+              '## Screenshot test failures',
+              '',
+              'The `Screenshot tests` job detected pixel diffs versus the committed baselines.',
+              '',
+              `**Diff report**: download the \`screenshot-diff-report\` artifact from [this run](${process.env.RUN_URL}#artifacts) and open \`index.html\` to inspect side-by-side diffs.`,
+              '',
+              'If the changes are intentional, add the `update-baselines` label to this PR to regenerate baselines automatically.',
+            ].join('\n');
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
+      - name: Clean up stale failure comment on success
+        if: success() && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = '<!-- screenshot-diff-comment -->';
+            const { owner, repo } = context.repo;
+            const issue_number = context.payload.pull_request.number;
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number });
+            const stale = comments.find(c => c.body && c.body.includes(marker));
+            if (stale) {
+              await github.rest.issues.deleteComment({ owner, repo, comment_id: stale.id });
+            }
 
   rename-script:
     name: Rename script
