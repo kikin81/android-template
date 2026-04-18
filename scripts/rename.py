@@ -10,6 +10,7 @@ immediately after cloning from the template.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from pathlib import Path
@@ -65,6 +66,44 @@ def _preflight(repo: Path) -> None:
         )
 
 
+REWRITE_SUFFIXES = {".kt", ".kts", ".xml", ".md", ".properties", ".toml"}
+SKIP_DIR_NAMES = {".git", ".gradle", ".idea", "build", "node_modules"}
+SELF_NAME = "rename.py"
+
+
+def _rewrite_files(repo: Path, args: argparse.Namespace) -> None:
+    dotted_new = args.package
+    slashed_new = "/".join(args.package.split("."))
+    # Order matters: longest/most-specific patterns first. `MyApplication` must
+    # come before `MyApp` so `MyApplicationTheme` doesn't mangle into
+    # `{pascal}licationTheme`.
+    substitutions = [
+        (OLD_PACKAGE_DOTTED, dotted_new),
+        (OLD_PACKAGE_SLASHED, slashed_new),
+        (OLD_APP_NAME, args.app_name),
+        (OLD_APPLICATION, args.app_name_pascal),
+        (OLD_PASCAL, args.app_name_pascal),
+        (OLD_LOWER, args.app_name_lower),
+    ]
+    for dirpath, dirs, files in os.walk(repo):
+        dirs[:] = [d for d in dirs if d not in SKIP_DIR_NAMES]
+        for name in files:
+            if name == SELF_NAME:
+                continue
+            path = Path(dirpath) / name
+            if path.suffix not in REWRITE_SUFFIXES:
+                continue
+            try:
+                original = path.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                continue
+            updated = original
+            for old, new in substitutions:
+                updated = updated.replace(old, new)
+            if updated != original:
+                path.write_text(updated, encoding="utf-8")
+
+
 def _move_dirs(repo: Path, package: str) -> None:
     new_parts = package.split(".")
     for sub in ("main", "test", "androidTest"):
@@ -89,6 +128,7 @@ def main(argv: list[str] | None = None) -> int:
     repo = Path.cwd()
     _preflight(repo)
     _move_dirs(repo, args.package)
+    _rewrite_files(repo, args)
     return 0
 
 

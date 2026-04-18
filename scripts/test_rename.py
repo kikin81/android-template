@@ -92,5 +92,61 @@ class RenameDirectoriesTest(unittest.TestCase):
                 self.assertTrue(new.is_dir(), f"{new} should exist")
 
 
+class RenameContentTest(unittest.TestCase):
+    def test_rewrites_placeholders_across_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            project = Path(tmp) / "proj"
+            _scaffold(project)
+            result = _run_rename(
+                project,
+                "--package", "com.acme.widget",
+                "--app-name", "Acme Widget",
+                "--app-name-pascal", "AcmeWidget",
+                "--app-name-lower", "acmewidget",
+            )
+            self.assertEqual(result.returncode, 0, msg=result.stderr)
+
+            # No residual placeholders anywhere.
+            for dirpath, _dirs, files in os.walk(project):
+                if any(skip in dirpath for skip in (".gradle", "build", ".idea")):
+                    continue
+                for name in files:
+                    if name == "rename.py":
+                        continue
+                    path = Path(dirpath) / name
+                    try:
+                        text = path.read_text(encoding="utf-8")
+                    except UnicodeDecodeError:
+                        continue
+                    for needle in (
+                        "com.example.myapp",
+                        "com/example/myapp",
+                        "My App",
+                        "MyApplication",
+                        "MyApp",
+                        "myapp",
+                    ):
+                        self.assertNotIn(needle, text, f"{needle!r} still in {path}")
+
+            # Spot-check key files have the new identifiers.
+            build_gradle = (project / "app" / "build.gradle.kts").read_text()
+            self.assertIn('namespace = "com.acme.widget"', build_gradle)
+            self.assertIn('applicationId = "com.acme.widget"', build_gradle)
+
+            settings_gradle = (project / "settings.gradle.kts").read_text()
+            self.assertIn('rootProject.name = "Acme Widget"', settings_gradle)
+
+            strings_xml = (project / "app" / "src" / "main" / "res" / "values" / "strings.xml").read_text()
+            self.assertIn(">Acme Widget<", strings_xml)
+
+            # Theme-name substitution must produce `AcmeWidgetTheme`, not
+            # `AcmeWidgetlicationTheme` (regression guard for MyApplication order).
+            theme_kt = (
+                project / "app" / "src" / "main" / "java" / "com" / "acme" / "widget" / "theme" / "Theme.kt"
+            ).read_text()
+            self.assertIn("AcmeWidgetTheme", theme_kt)
+            self.assertNotIn("AcmeWidgetlication", theme_kt)
+
+
 if __name__ == "__main__":
     unittest.main()
