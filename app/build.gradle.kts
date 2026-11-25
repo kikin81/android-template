@@ -102,7 +102,7 @@ tasks.register("publish") {
 }
 
 jacoco {
-    toolVersion = "0.8.14"
+    toolVersion = "0.8.16"
 }
 
 tasks.register<JacocoReport>("jacocoTestReport") {
